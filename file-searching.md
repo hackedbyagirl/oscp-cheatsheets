@@ -1,4 +1,4 @@
-## Find
+# Finding Files and Strings
 
 ```bash
 # Find all the files whose name is test.txt in the current working directory		
