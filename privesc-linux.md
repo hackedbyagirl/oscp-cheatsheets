@@ -298,6 +298,9 @@ python -c 'import pty;pty.spawn("/bin/bash")'
 echo os.system('/bin/bash')
 /bin/sh -i
 vi -> :sh or :!UNIX_command
+# In open vim editor
+:set shell=/bin/bash
+:shell
 
 # Mounted filesystems
 mount
