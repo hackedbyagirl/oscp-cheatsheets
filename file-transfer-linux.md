@@ -1,5 +1,19 @@
 # Linux File Transfer
+## Method
+```bash
+# Check for Dev Environements
+find / -name perl*
+find / -name python*
+find / -name gcc* 
+find / -name cc
 
+# Check to see how files can be uploaded
+find / -name wget
+find / -name nc*
+find / -name netcat*
+find / -name tftp*
+find / -name ftp
+```
 
 ## Python SimpleHTTPServer
 ```bash
