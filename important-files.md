@@ -34,5 +34,28 @@ C:\Windows\System32\drivers\etc\networks (network settings)
 C:\Windows\system32\config\SAM (only really useful if you have access to the files while the machine is off)
 ```
 
+## Linux
+```
+cat /etc/passwd
+cat /etc/group
+cat /etc/shadow
+ls -alh /var/mail/
 
+# private key search
+~/.ssh/authorized_keys
+~/.ssh/identity.pub
+~/.ssh/identity
+~/.ssh/id_rsa.pub
+~/.ssh/id_rsa
+~/.ssh/id_dsa.pub
+~/.ssh/id_dsa
+/etc/ssh/ssh_config
+/etc/ssh/sshd_config
+/etc/ssh/ssh_host_dsa_key.pub
+/etc/ssh/ssh_host_dsa_key
+/etc/ssh/ssh_host_rsa_key.pub
+/etc/ssh/ssh_host_rsa_key
+/etc/ssh/ssh_host_key.pub
+/etc/ssh/ssh_host_key
+```
 
